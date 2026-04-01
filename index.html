@@ -11,7 +11,6 @@
             padding: 50px;
             background-color: #f4f4f4;
         }
-
         .form-container {
             background: white;
             padding: 20px;
@@ -19,7 +18,6 @@
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             width: 300px;
         }
-
         input {
             width: 100%;
             padding: 10px;
@@ -28,7 +26,6 @@
             border-radius: 5px;
             box-sizing: border-box;
         }
-
         button {
             width: 100%;
             padding: 10px;
@@ -39,7 +36,6 @@
             cursor: pointer;
             border-radius: 5px;
         }
-
         button:hover {
             background: #357abd;
         }
@@ -63,7 +59,7 @@
     import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
     // Конфигурация Firebase
-     const firebaseConfig = {
+const firebaseConfig = {
   apiKey: "AIzaSyAr8f6PflSiVczpj8WgED80IiT3s-ZfyxA",
   authDomain: "messi-c20b5.firebaseapp.com",
   projectId: "messi-c20b5",
@@ -90,17 +86,12 @@
                 name: nameInput,
                 email: emailInput,
                 timestamp: new Date()
-            });
-
-            alert("Готово! Данные сохранены в Firebase.");
-            document.getElementById("feedbackForm").reset();
-
-        } catch (error) {
-            console.error("Ошибка записи:", error);
-            alert("Ошибка при отправке.");
-        }
-    });
+alert("Готово! Данные сохранены в Firebase.");
+document.getElementById("feedbackForm").reset();
+} catch (error) (
+console.erroг ("Ошибка записи: error);
+alert("Ошибка при отправке.");
+));
 </script>
-
 </body>
 </html>
