@@ -5,40 +5,39 @@
 <title>BaaS + Google Auth</title>
 
 <style>
-body { font-family: Arial; background:#f4f7f6; display:flex; flex-direction:column; align-items:center; padding:20px;}
-.container { background:#fff; padding:20px; border-radius:10px; width:400px; box-shadow:0 4px 10px rgba(0,0,0,0.1);}
-button { padding:10px; margin-top:10px; cursor:pointer; }
-.post { background:#fff; border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:8px; width:400px;}
-img { max-width:100%; border-radius:8px; margin-top:5px;}
+body { font-family: Arial; background:#f4f7f6; text-align:center; padding:20px; }
+.container { max-width:500px; margin:auto; background:#fff; padding:20px; border-radius:10px; }
+input { width:100%; padding:10px; margin:5px 0; }
+button { padding:10px; margin-top:10px; width:100%; cursor:pointer; }
+.post { background:#fff; border:1px solid #ddd; padding:10px; margin-top:10px; border-radius:8px; }
+.actions { display:flex; gap:5px; flex-wrap:wrap; margin-top:10px; }
 </style>
 </head>
+
 <body>
 
-<div class="container">
-
+<div class="container" id="authBlock">
+    <h3>Вход</h3>
     <button id="loginBtn">Войти через Google</button>
-    <button id="logoutBtn" style="display:none;">Выйти</button>
+</div>
 
-    <div id="userInfo" style="display:none;">
-        👤 <span id="userName"></span>
-    </div>
+<div class="container" id="appBlock" style="display:none;">
+    <h3 id="userName"></h3>
+    <button id="logoutBtn">Выйти</button>
 
-    <div id="form" style="display:none;">
-        <input type="text" id="text" placeholder="Ваш текст">
-        <input type="file" id="image">
-        <button id="sendBtn">Опубликовать</button>
-    </div>
-
+    <input id="name" placeholder="Имя">
+    <input id="email" placeholder="Email">
+    <button id="mainBtn">Добавить</button>
 </div>
 
 <div id="feed"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-
 import {
-    getFirestore, collection, addDoc, query,
-    orderBy, onSnapshot, serverTimestamp
+    getFirestore, collection, addDoc, query, orderBy,
+    onSnapshot, serverTimestamp, updateDoc, doc,
+    increment, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 import {
@@ -46,96 +45,89 @@ import {
     signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-import {
-    getStorage, ref, uploadBytes, getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-storage.js";
-
+// 🔥 ТВОЙ CONFIG
 const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  authDomain: "YOUR_DOMAIN",
-  projectId: "YOUR_ID",
-  storageBucket: "YOUR_BUCKET",
+  apiKey: "AIzaSyCFVJ51BsKGuUxQt0o33SWEOGuwiZ3kEOk",
+  authDomain: "nail-f4d56.firebaseapp.com",
+  projectId: "nail-f4d56",
+  storageBucket: "nail-f4d56.firebasestorage.app",
+  messagingSenderId: "168626129143",
+  appId: "1:168626129143:web:e7ce853bb23007b490ebf2"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-const storage = getStorage(app);
-
 const provider = new GoogleAuthProvider();
 
+// UI
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const userInfo = document.getElementById("userInfo");
-const userName = document.getElementById("userName");
-const form = document.getElementById("form");
+const authBlock = document.getElementById("authBlock");
+const appBlock = document.getElementById("appBlock");
 
+// LOGIN
 loginBtn.onclick = () => signInWithPopup(auth, provider);
+
+// LOGOUT
 logoutBtn.onclick = () => signOut(auth);
 
-// ✅ Проверка авторизации
+// STATE
 onAuthStateChanged(auth, (user) => {
     if (user) {
-        loginBtn.style.display = "none";
-        logoutBtn.style.display = "block";
-        userInfo.style.display = "block";
-        form.style.display = "block";
+        authBlock.style.display = "none";
+        appBlock.style.display = "block";
+        document.getElementById("userName").innerText = "👤 " + user.displayName;
 
-        userName.textContent = user.displayName;
+        document.getElementById("name").value = user.displayName;
+        document.getElementById("email").value = user.email;
     } else {
-        loginBtn.style.display = "block";
-        logoutBtn.style.display = "none";
-        userInfo.style.display = "none";
-        form.style.display = "none";
+        authBlock.style.display = "block";
+        appBlock.style.display = "none";
     }
 });
 
-// ✅ Отправка поста (только если залогинен)
-document.getElementById("sendBtn").onclick = async () => {
-    const user = auth.currentUser;
-    if (!user) return alert("Войдите!");
+// CREATE POST
+document.getElementById("mainBtn").onclick = async () => {
+    const name = document.getElementById("name").value;
+    const email = document.getElementById("email").value;
 
-    const text = document.getElementById("text").value;
-    const file = document.getElementById("image").files[0];
+    if (!name || !email) return alert("Заполни поля");
 
-    let imageUrl = "";
-
-    // 🔹 загрузка картинки
-    if (file) {
-        const storageRef = ref(storage, "images/" + Date.now());
-        await uploadBytes(storageRef, file);
-        imageUrl = await getDownloadURL(storageRef);
-    }
-
-    // 🔹 запись в Firestore
-    await addDoc(collection(db, "posts"), {
-        uid: user.uid,
-        name: user.displayName,
-        text: text,
-        image: imageUrl,
+    await addDoc(collection(db, "requests"), {
+        name,
+        email,
+        likes: 0,
+        dislikes: 0,
         timestamp: serverTimestamp()
     });
-
-    document.getElementById("text").value = "";
 };
 
-// ✅ Лента
-const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+// ACTIONS
+window.like = (id) => updateDoc(doc(db, "requests", id), { likes: increment(1) });
+window.dislike = (id) => updateDoc(doc(db, "requests", id), { dislikes: increment(1) });
+window.del = (id) => deleteDoc(doc(db, "requests", id));
 
-onSnapshot(q, (snapshot) => {
+// FEED
+const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
+
+onSnapshot(q, (snap) => {
     const feed = document.getElementById("feed");
     feed.innerHTML = "";
 
-    snapshot.forEach(doc => {
-        const d = doc.data();
+    snap.forEach(d => {
+        const data = d.data();
 
         feed.innerHTML += `
-            <div class="post">
-                <b>${d.name}</b>
-                <p>${d.text}</p>
-                ${d.image ? `<img src="${d.image}">` : ""}
+        <div class="post">
+            <b>${data.name}</b>
+            <p>${data.email}</p>
+            <div class="actions">
+                <button onclick="like('${d.id}')">👍 ${data.likes || 0}</button>
+                <button onclick="dislike('${d.id}')">👎 ${data.dislikes || 0}</button>
+                <button onclick="del('${d.id}')">🗑</button>
             </div>
-        `;
+        </div>`;
     });
 });
 </script>
