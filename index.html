@@ -226,7 +226,13 @@ window.startChat = (otherId, name) => {
 // SEND
 window.sendMessage = async () => {
     const input = document.getElementById("messageInput");
-    if (!input.value) return;
+
+    if (!currentChatId) {
+        alert("Выбери пользователя");
+        return;
+    }
+
+    if (!input.value.trim()) return;
 
     await addDoc(collection(db, "messages"), {
         chatId: currentChatId,
