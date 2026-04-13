@@ -195,31 +195,41 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // USERS
-function loadUsers() {
-    onSnapshot(collection(db, "users"), (snap) => {
-        const list = document.getElementById("usersList");
-        list.innerHTML = "";
+function startChat(otherId, name) {
+
+    currentChatId = [auth.currentUser.uid, otherId]
+        .sort().join("_");
+
+    document.getElementById("chatWith").innerText =
+        "Чат с " + name;
+
+    if (unsubscribeMessages) unsubscribeMessages();
+
+    const q = query(
+        collection(db, "messages"),
+        where("chatId", "==", currentChatId)
+    );
+
+    unsubscribeMessages = onSnapshot(q, (snap) => {
+        const chat = document.getElementById("chat");
+        chat.innerHTML = "";
 
         snap.forEach(d => {
-            if (d.id === auth.currentUser.uid) return;
+            const m = d.data();
 
-            const u = d.data();
+            const isMe =
+                m.senderId === auth.currentUser.uid;
 
             const div = document.createElement("div");
-            div.className = "user";
+            div.className = "message " + (isMe ? "me" : "");
+            div.textContent = m.text;
 
-            div.innerHTML = `
-                <div class="avatar">${u.name[0]}</div>
-                ${u.name}
-            `;
-
-            div.onclick = () => startChat(d.id, u.name);
-
-            list.appendChild(div);
+            chat.appendChild(div);
         });
+
+        chat.scrollTop = chat.scrollHeight;
     });
 }
-
 // START CHAT
 function startChat(otherId, name) {
 
