@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Mini App Firebase</title>
+<title>DM Firebase</title>
 
 <style>
 body {
@@ -11,127 +11,82 @@ body {
     margin: 0;
 }
 
-/* NAVBAR */
 .navbar {
     background: #4CAF50;
     color: white;
     padding: 15px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
 }
 
-.navbar h2 {
-    margin: 0;
-}
-
-.navbar button {
-    background: white;
-    color: #4CAF50;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 6px;
-    cursor: pointer;
-}
-
-/* CONTAINER */
 .container {
     max-width: 500px;
-    margin: 20px auto;
-    background: #fff;
-    padding: 20px;
-    border-radius: 12px;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-}
-
-/* INPUTS */
-input {
-    width: 100%;
-    padding: 10px;
-    margin: 8px 0;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-}
-
-/* BUTTON */
-button {
-    padding: 10px;
-    margin-top: 10px;
-    width: 100%;
-    border: none;
-    background: #4CAF50;
-    color: white;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: 0.2s;
-}
-
-button:hover {
-    background: #45a049;
-}
-
-/* POSTS */
-.post {
-    background: white;
-    border-radius: 10px;
-    padding: 15px;
     margin: 15px auto;
-    max-width: 500px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
 }
 
-.actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 10px;
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 8px;
 }
 
-.actions button {
-    flex: 1;
-    background: #eee;
-    color: #333;
+.user {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
 }
 
-.actions button:hover {
-    background: #ddd;
+.message {
+    padding: 6px;
+    margin: 5px 0;
+}
+
+.me {
+    text-align: right;
+    color: green;
 }
 </style>
 </head>
 
 <body>
 
-<!-- NAVBAR -->
 <div class="navbar" id="navbar" style="display:none;">
-    <h2>🔥 Mini App</h2>
+    <span id="userName"></span>
     <button id="logoutBtn">Выйти</button>
 </div>
 
-<!-- AUTH -->
 <div class="container" id="authBlock">
-    <h3>Добро пожаловать</h3>
-    <p>Войди через Google чтобы продолжить</p>
+    <h3>Вход</h3>
     <button id="loginBtn">Войти через Google</button>
 </div>
 
-<!-- APP -->
-<div class="container" id="appBlock" style="display:none;">
-    <h3 id="userName"></h3>
+<div id="appBlock" style="display:none;">
 
-    <input id="name" placeholder="Имя">
-    <input id="email" placeholder="Email">
+    <!-- USERS -->
+    <div class="container">
+        <h3>Пользователи</h3>
+        <div id="usersList"></div>
+    </div>
 
-    <button id="mainBtn">Добавить запись</button>
+    <!-- CHAT -->
+    <div class="container">
+        <h3>Чат</h3>
+        <div id="chat"></div>
+
+        <input id="messageInput" placeholder="Сообщение">
+        <button onclick="sendMessage()">Отправить</button>
+    </div>
+
 </div>
-
-<!-- FEED -->
-<div id="feed"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 import {
-    getFirestore, collection, addDoc, query, orderBy,
-    onSnapshot, serverTimestamp, updateDoc, doc,
-    increment, deleteDoc
+    getFirestore, collection, addDoc, query,
+    onSnapshot, serverTimestamp, doc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 import {
@@ -139,7 +94,6 @@ import {
     signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-// 🔥 CONFIG
 const firebaseConfig = {
   apiKey: "AIzaSyCFVJ51BsKGuUxQt0o33SWEOGuwiZ3kEOk",
   authDomain: "nail-f4d56.firebaseapp.com",
@@ -163,21 +117,26 @@ const navbar = document.getElementById("navbar");
 
 // LOGIN
 loginBtn.onclick = () => signInWithPopup(auth, provider);
-
-// LOGOUT
 logoutBtn.onclick = () => signOut(auth);
 
+let currentChatId = null;
+
 // STATE
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     if (user) {
         authBlock.style.display = "none";
         appBlock.style.display = "block";
         navbar.style.display = "flex";
 
-        document.getElementById("userName").innerText = "👤 " + user.displayName;
+        document.getElementById("userName").innerText = user.displayName;
 
-        document.getElementById("name").value = user.displayName;
-        document.getElementById("email").value = user.email;
+        // 🔥 сохраняем пользователя
+        await setDoc(doc(db, "users", user.uid), {
+            name: user.displayName,
+            email: user.email
+        });
+
+        loadUsers();
     } else {
         authBlock.style.display = "block";
         appBlock.style.display = "none";
@@ -185,49 +144,72 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// CREATE POST
-document.getElementById("mainBtn").onclick = async () => {
-    const name = document.getElementById("name").value;
-    const email = document.getElementById("email").value;
+// 👥 USERS
+function loadUsers() {
+    onSnapshot(collection(db, "users"), (snap) => {
+        const list = document.getElementById("usersList");
+        list.innerHTML = "";
 
-    if (!name || !email) return alert("Заполни поля");
+        snap.forEach(d => {
+            if (d.id === auth.currentUser.uid) return;
 
-    await addDoc(collection(db, "requests"), {
-        name,
-        email,
-        likes: 0,
-        dislikes: 0,
-        timestamp: serverTimestamp()
+            const u = d.data();
+
+            list.innerHTML += `
+                <div class="user" onclick="startChat('${d.id}')">
+                    👤 ${u.name}
+                </div>
+            `;
+        });
     });
+}
+
+// 💬 START CHAT
+window.startChat = (otherUserId) => {
+    const user = auth.currentUser;
+
+    // уникальный id чата
+    currentChatId = [user.uid, otherUserId].sort().join("_");
+
+    loadMessages();
 };
 
-// ACTIONS
-window.like = (id) => updateDoc(doc(db, "requests", id), { likes: increment(1) });
-window.dislike = (id) => updateDoc(doc(db, "requests", id), { dislikes: increment(1) });
-window.del = (id) => deleteDoc(doc(db, "requests", id));
+// ✉️ SEND
+window.sendMessage = async () => {
+    const text = document.getElementById("messageInput").value;
+    if (!text || !currentChatId) return;
 
-// FEED
-const q = query(collection(db, "requests"), orderBy("timestamp", "desc"));
-
-onSnapshot(q, (snap) => {
-    const feed = document.getElementById("feed");
-    feed.innerHTML = "";
-
-    snap.forEach(d => {
-        const data = d.data();
-
-        feed.innerHTML += `
-        <div class="post">
-            <b>${data.name}</b>
-            <p>${data.email}</p>
-            <div class="actions">
-                <button onclick="like('${d.id}')">👍 ${data.likes || 0}</button>
-                <button onclick="dislike('${d.id}')">👎 ${data.dislikes || 0}</button>
-                <button onclick="del('${d.id}')">🗑</button>
-            </div>
-        </div>`;
+    await addDoc(collection(db, "messages"), {
+        chatId: currentChatId,
+        senderId: auth.currentUser.uid,
+        text,
+        timestamp: serverTimestamp()
     });
-});
+
+    document.getElementById("messageInput").value = "";
+};
+
+// 🔄 LOAD MESSAGES
+function loadMessages() {
+    const q = query(collection(db, "messages"));
+
+    onSnapshot(q, (snap) => {
+        const chat = document.getElementById("chat");
+        chat.innerHTML = "";
+
+        snap.forEach(d => {
+            const m = d.data();
+
+            if (m.chatId !== currentChatId) return;
+
+            chat.innerHTML += `
+                <div class="message ${m.senderId === auth.currentUser.uid ? 'me' : ''}">
+                    ${m.text}
+                </div>
+            `;
+        });
+    });
+}
 </script>
 
 </body>
