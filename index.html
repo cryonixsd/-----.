@@ -1,3 +1,144 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>DM UI</title>
+
+<style>
+body {
+    font-family: 'Segoe UI';
+    background: #e9edf2;
+    margin: 0;
+}
+
+/* CARD */
+.card {
+    width: 420px;
+    margin: 20px auto;
+    background: white;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+/* USER HEADER */
+.user-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    background: #4CAF50;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* USER LIST */
+.user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 8px;
+}
+
+.user:hover {
+    background: #f3f3f3;
+}
+
+/* CHAT */
+.chat-box {
+    background: #f7f7f7;
+    border-radius: 10px;
+    height: 200px;
+    padding: 10px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+/* MESSAGE */
+.message {
+    background: #e4e6eb;
+    padding: 6px 10px;
+    border-radius: 8px;
+    margin: 5px 0;
+    max-width: 70%;
+}
+
+.me {
+    background: #4CAF50;
+    color: white;
+    margin-left: auto;
+}
+
+/* INPUT */
+.input-row {
+    display: flex;
+    margin-top: 10px;
+}
+
+.input-row input {
+    flex: 1;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+
+.input-row button {
+    margin-left: 5px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- PROFILE -->
+<div class="card" id="profile" style="display:none;">
+    <div class="user-header">
+        <div class="avatar" id="avatar"></div>
+        <div>
+            <b id="userName"></b><br>
+            <small>online</small>
+        </div>
+    </div>
+</div>
+
+<!-- USERS -->
+<div class="card" id="usersBlock" style="display:none;">
+    <h4>Выберите собеседника</h4>
+    <div id="usersList"></div>
+</div>
+
+<!-- CHAT -->
+<div class="card" id="chatBlock" style="display:none;">
+    <h4 id="chatWith">Чат</h4>
+
+    <div class="chat-box" id="chat"></div>
+
+    <div class="input-row">
+        <input id="messageInput" placeholder="Ваше сообщение">
+        <button id="sendBtn">➤</button>
+    </div>
+</div>
+
+<!-- AUTH -->
+<div class="card" id="authBlock">
+    <button id="loginBtn">Войти через Google</button>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
 
@@ -12,10 +153,11 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
+// ⚠️ ТВОЙ CONFIG (оставил твой)
 const firebaseConfig = {
-  apiKey: "ТВОЙ_API_KEY",
-  authDomain: "ТВОЙ_DOMAIN",
-  projectId: "ТВОЙ_ID"
+  apiKey: "AIzaSyCFVJ51BsKGuUxQt0o33SWEOGuwiZ3kEOk",
+  authDomain: "nail-f4d56.firebaseapp.com",
+  projectId: "nail-f4d56"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -28,6 +170,7 @@ document.getElementById("loginBtn").onclick = () =>
 
 let currentChatId = null;
 let currentUserName = "";
+let unsubscribeMessages = null;
 
 // AUTH
 onAuthStateChanged(auth, async (user) => {
@@ -78,39 +221,15 @@ function loadUsers() {
 }
 
 // START CHAT
-window.startChat = (otherId, name) => {
+function startChat(otherId, name) {
+
     currentChatId = [auth.currentUser.uid, otherId]
         .sort().join("_");
 
     document.getElementById("chatWith").innerText =
         "Чат с " + name;
 
-    loadMessages();
-};
-
-// SEND
-window.sendMessage = async () => {
-    const input = document.getElementById("messageInput");
-
-    if (!currentChatId) {
-        alert("Выбери пользователя");
-        return;
-    }
-
-    if (!input.value.trim()) return;
-
-    await addDoc(collection(db, "messages"), {
-        chatId: currentChatId,
-        senderId: auth.currentUser.uid,
-        text: input.value,
-        timestamp: serverTimestamp()
-    });
-
-    input.value = "";
-};
-
-// LOAD (ВАЖНО: теперь только нужные сообщения)
-function loadMessages() {
+    if (unsubscribeMessages) unsubscribeMessages();
 
     const q = query(
         collection(db, "messages"),
@@ -118,7 +237,7 @@ function loadMessages() {
         orderBy("timestamp")
     );
 
-    onSnapshot(q, (snap) => {
+    unsubscribeMessages = onSnapshot(q, (snap) => {
         const chat = document.getElementById("chat");
         chat.innerHTML = "";
 
@@ -138,4 +257,28 @@ function loadMessages() {
         chat.scrollTop = chat.scrollHeight;
     });
 }
+
+// SEND
+document.getElementById("sendBtn").onclick = async () => {
+    const input = document.getElementById("messageInput");
+
+    if (!currentChatId) {
+        alert("Выбери пользователя");
+        return;
+    }
+
+    if (!input.value.trim()) return;
+
+    await addDoc(collection(db, "messages"), {
+        chatId: currentChatId,
+        senderId: auth.currentUser.uid,
+        text: input.value,
+        timestamp: serverTimestamp()
+    });
+
+    input.value = "";
+};
 </script>
+
+</body>
+</html>
