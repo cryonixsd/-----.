@@ -11,7 +11,6 @@ body {
     margin: 0;
 }
 
-/* CARD */
 .card {
     width: 420px;
     margin: 20px auto;
@@ -21,7 +20,6 @@ body {
     box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
 
-/* USER HEADER */
 .user-header {
     display: flex;
     align-items: center;
@@ -39,7 +37,6 @@ body {
     justify-content: center;
 }
 
-/* USER LIST */
 .user {
     display: flex;
     align-items: center;
@@ -53,17 +50,15 @@ body {
     background: #f3f3f3;
 }
 
-/* CHAT */
 .chat-box {
     background: #f7f7f7;
     border-radius: 10px;
-    height: 200px;
+    height: 250px;
     padding: 10px;
     overflow-y: auto;
     margin-top: 10px;
 }
 
-/* MESSAGE */
 .message {
     background: #e4e6eb;
     padding: 6px 10px;
@@ -78,7 +73,6 @@ body {
     margin-left: auto;
 }
 
-/* INPUT */
 .input-row {
     display: flex;
     margin-top: 10px;
@@ -105,7 +99,6 @@ body {
 
 <body>
 
-<!-- PROFILE -->
 <div class="card" id="profile" style="display:none;">
     <div class="user-header">
         <div class="avatar" id="avatar"></div>
@@ -116,13 +109,11 @@ body {
     </div>
 </div>
 
-<!-- USERS -->
 <div class="card" id="usersBlock" style="display:none;">
     <h4>Выберите собеседника</h4>
     <div id="usersList"></div>
 </div>
 
-<!-- CHAT -->
 <div class="card" id="chatBlock" style="display:none;">
     <h4 id="chatWith">Чат</h4>
 
@@ -134,7 +125,6 @@ body {
     </div>
 </div>
 
-<!-- AUTH -->
 <div class="card" id="authBlock">
     <button id="loginBtn">Войти через Google</button>
 </div>
@@ -145,7 +135,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebas
 import {
     getFirestore, collection, addDoc, onSnapshot,
     serverTimestamp, doc, setDoc,
-    query, where, orderBy
+    query, where
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
 
 import {
@@ -153,7 +143,6 @@ import {
     onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
 
-// ⚠️ ТВОЙ CONFIG (оставил твой)
 const firebaseConfig = {
   apiKey: "AIzaSyCFVJ51BsKGuUxQt0o33SWEOGuwiZ3kEOk",
   authDomain: "nail-f4d56.firebaseapp.com",
@@ -169,7 +158,6 @@ document.getElementById("loginBtn").onclick = () =>
     signInWithPopup(auth, provider);
 
 let currentChatId = null;
-let currentUserName = "";
 let unsubscribeMessages = null;
 
 // AUTH
@@ -180,8 +168,6 @@ onAuthStateChanged(auth, async (user) => {
     document.getElementById("profile").style.display = "block";
     document.getElementById("usersBlock").style.display = "block";
     document.getElementById("chatBlock").style.display = "block";
-
-    currentUserName = user.displayName;
 
     document.getElementById("userName").innerText = user.displayName;
     document.getElementById("avatar").innerText =
@@ -195,41 +181,31 @@ onAuthStateChanged(auth, async (user) => {
 });
 
 // USERS
-function startChat(otherId, name) {
-
-    currentChatId = [auth.currentUser.uid, otherId]
-        .sort().join("_");
-
-    document.getElementById("chatWith").innerText =
-        "Чат с " + name;
-
-    if (unsubscribeMessages) unsubscribeMessages();
-
-    const q = query(
-        collection(db, "messages"),
-        where("chatId", "==", currentChatId)
-    );
-
-    unsubscribeMessages = onSnapshot(q, (snap) => {
-        const chat = document.getElementById("chat");
-        chat.innerHTML = "";
+function loadUsers() {
+    onSnapshot(collection(db, "users"), (snap) => {
+        const list = document.getElementById("usersList");
+        list.innerHTML = "";
 
         snap.forEach(d => {
-            const m = d.data();
+            if (d.id === auth.currentUser.uid) return;
 
-            const isMe =
-                m.senderId === auth.currentUser.uid;
+            const u = d.data();
 
             const div = document.createElement("div");
-            div.className = "message " + (isMe ? "me" : "");
-            div.textContent = m.text;
+            div.className = "user";
 
-            chat.appendChild(div);
+            div.innerHTML = `
+                <div class="avatar">${u.name[0]}</div>
+                ${u.name}
+            `;
+
+            div.onclick = () => startChat(d.id, u.name);
+
+            list.appendChild(div);
         });
-
-        chat.scrollTop = chat.scrollHeight;
     });
 }
+
 // START CHAT
 function startChat(otherId, name) {
 
@@ -241,19 +217,27 @@ function startChat(otherId, name) {
 
     if (unsubscribeMessages) unsubscribeMessages();
 
+    // ❗ БЕЗ orderBy (чтобы работало сразу)
     const q = query(
         collection(db, "messages"),
-        where("chatId", "==", currentChatId),
-        orderBy("timestamp")
+        where("chatId", "==", currentChatId)
     );
 
     unsubscribeMessages = onSnapshot(q, (snap) => {
         const chat = document.getElementById("chat");
         chat.innerHTML = "";
 
-        snap.forEach(d => {
-            const m = d.data();
+        let messages = [];
 
+        snap.forEach(d => messages.push(d.data()));
+
+        // сортируем вручную (замена orderBy)
+        messages.sort((a, b) =>
+            (a.timestamp?.seconds || 0) -
+            (b.timestamp?.seconds || 0)
+        );
+
+        messages.forEach(m => {
             const isMe =
                 m.senderId === auth.currentUser.uid;
 
@@ -282,7 +266,7 @@ document.getElementById("sendBtn").onclick = async () => {
     await addDoc(collection(db, "messages"), {
         chatId: currentChatId,
         senderId: auth.currentUser.uid,
-        text: input.value,
+        text: input.value.trim(),
         timestamp: serverTimestamp()
     });
 
