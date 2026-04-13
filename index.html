@@ -2,12 +2,12 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>DM Firebase</title>
+<title>DM App</title>
 
 <style>
 body {
-    font-family: 'Segoe UI', Arial;
-    background: linear-gradient(135deg, #eef2f3, #dfe9f3);
+    font-family: Arial;
+    background: #f0f2f5;
     margin: 0;
 }
 
@@ -22,31 +22,34 @@ body {
 .container {
     max-width: 500px;
     margin: 15px auto;
-    background: #fff;
+    background: white;
     padding: 15px;
-    border-radius: 12px;
-}
-
-input, button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 8px;
+    border-radius: 10px;
 }
 
 .user {
-    padding: 8px;
+    padding: 10px;
     border-bottom: 1px solid #eee;
     cursor: pointer;
 }
 
+.user:hover {
+    background: #f5f5f5;
+}
+
 .message {
-    padding: 6px;
     margin: 5px 0;
 }
 
 .me {
     text-align: right;
     color: green;
+}
+
+#chat {
+    min-height: 150px;
+    max-height: 250px;
+    overflow-y: auto;
 }
 </style>
 </head>
@@ -73,7 +76,7 @@ input, button {
 
     <!-- CHAT -->
     <div class="container">
-        <h3>Чат</h3>
+        <h3 id="chatWith">Выберите пользователя</h3>
         <div id="chat"></div>
 
         <input id="messageInput" placeholder="Сообщение">
@@ -108,29 +111,26 @@ const db = getFirestore(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
-// UI
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
-const authBlock = document.getElementById("authBlock");
-const appBlock = document.getElementById("appBlock");
-const navbar = document.getElementById("navbar");
 
-// LOGIN
 loginBtn.onclick = () => signInWithPopup(auth, provider);
 logoutBtn.onclick = () => signOut(auth);
 
 let currentChatId = null;
+let currentUserName = "";
 
-// STATE
+// AUTH
 onAuthStateChanged(auth, async (user) => {
     if (user) {
-        authBlock.style.display = "none";
-        appBlock.style.display = "block";
-        navbar.style.display = "flex";
+        document.getElementById("authBlock").style.display = "none";
+        document.getElementById("appBlock").style.display = "block";
+        document.getElementById("navbar").style.display = "flex";
 
         document.getElementById("userName").innerText = user.displayName;
+        currentUserName = user.displayName;
 
-        // 🔥 сохраняем пользователя
+        // сохраняем пользователя
         await setDoc(doc(db, "users", user.uid), {
             name: user.displayName,
             email: user.email
@@ -138,13 +138,13 @@ onAuthStateChanged(auth, async (user) => {
 
         loadUsers();
     } else {
-        authBlock.style.display = "block";
-        appBlock.style.display = "none";
-        navbar.style.display = "none";
+        document.getElementById("authBlock").style.display = "block";
+        document.getElementById("appBlock").style.display = "none";
+        document.getElementById("navbar").style.display = "none";
     }
 });
 
-// 👥 USERS
+// USERS
 function loadUsers() {
     onSnapshot(collection(db, "users"), (snap) => {
         const list = document.getElementById("usersList");
@@ -156,7 +156,7 @@ function loadUsers() {
             const u = d.data();
 
             list.innerHTML += `
-                <div class="user" onclick="startChat('${d.id}')">
+                <div class="user" onclick="startChat('${d.id}','${u.name}')">
                     👤 ${u.name}
                 </div>
             `;
@@ -164,32 +164,36 @@ function loadUsers() {
     });
 }
 
-// 💬 START CHAT
-window.startChat = (otherUserId) => {
+// START CHAT
+window.startChat = (otherUserId, otherUserName) => {
     const user = auth.currentUser;
 
-    // уникальный id чата
     currentChatId = [user.uid, otherUserId].sort().join("_");
+
+    document.getElementById("chatWith").innerText = "Чат с: " + otherUserName;
 
     loadMessages();
 };
 
-// ✉️ SEND
+// SEND
 window.sendMessage = async () => {
-    const text = document.getElementById("messageInput").value;
+    const input = document.getElementById("messageInput");
+    const text = input.value;
+
     if (!text || !currentChatId) return;
 
     await addDoc(collection(db, "messages"), {
         chatId: currentChatId,
         senderId: auth.currentUser.uid,
+        senderName: currentUserName,
         text,
         timestamp: serverTimestamp()
     });
 
-    document.getElementById("messageInput").value = "";
+    input.value = "";
 };
 
-// 🔄 LOAD MESSAGES
+// LOAD MESSAGES
 function loadMessages() {
     const q = query(collection(db, "messages"));
 
@@ -202,9 +206,11 @@ function loadMessages() {
 
             if (m.chatId !== currentChatId) return;
 
+            const isMe = m.senderId === auth.currentUser.uid;
+
             chat.innerHTML += `
-                <div class="message ${m.senderId === auth.currentUser.uid ? 'me' : ''}">
-                    ${m.text}
+                <div class="message ${isMe ? 'me' : ''}">
+                    <b>${m.senderName}:</b> ${m.text}
                 </div>
             `;
         });
