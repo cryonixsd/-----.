@@ -1,278 +1,461 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<title>DM UI</title>
+// ============ ИНИЦИАЛИЗАЦИЯ ДАННЫХ ============
 
-<style>
-body {
-    font-family: 'Segoe UI';
-    background: #e9edf2;
-    margin: 0;
+const defaultOrders = [
+    { id: 1, userId: 101, orderDate: '2026-05-15', city: 'Алматы', address: 'ул. Абая, 45, кв. 12', totalAmount: 35000, status: 'Оплачен' },
+    { id: 2, userId: 102, orderDate: '2026-05-16', city: 'Астана', address: 'пр. Республики, 78', totalAmount: 28000, status: 'Новый' },
+    { id: 3, userId: 103, orderDate: '2026-05-17', city: 'Шымкент', address: 'ул. Тауке хана, 12', totalAmount: 52000, status: 'Доставлен' },
+    { id: 4, userId: 104, orderDate: '2026-05-18', city: 'Караганда', address: 'ул. Ермекова, 89, кв. 3', totalAmount: 15000, status: 'Отменён' },
+    { id: 5, userId: 105, orderDate: '2026-05-19', city: 'Алматы', address: 'ул. Розыбакиева, 101', totalAmount: 67000, status: 'Оплачен' },
+    { id: 6, userId: 106, orderDate: '2026-05-20', city: 'Астана', address: 'пр. Кабанбай батыра, 15', totalAmount: 43000, status: 'Новый' },
+    { id: 7, userId: 107, orderDate: '2026-05-21', city: 'Актобе', address: 'ул. Есет батыра, 56', totalAmount: 22500, status: 'Оплачен' },
+    { id: 8, userId: 108, orderDate: '2026-05-22', city: 'Алматы', address: 'мкр. Самал-2, 45, кв. 78', totalAmount: 91000, status: 'Доставлен' },
+    { id: 9, userId: 109, orderDate: '2026-05-23', city: 'Шымкент', address: 'ул. Гагарина, 34', totalAmount: 18000, status: 'Новый' },
+    { id: 10, userId: 110, orderDate: '2026-05-24', city: 'Астана', address: 'ул. Сатпаева, 67, кв. 23', totalAmount: 36000, status: 'Отменён' },
+];
+
+const defaultDelivery = [
+    { id: 1, orderId: 1, service: 'CDEK', method: 'Курьер', city: 'Алматы', address: 'ул. Абая, 45, кв. 12', cost: 2500, dispatchDate: '2026-05-16', deliveryDate: '2026-05-20', status: 'Доставлено' },
+    { id: 2, orderId: 2, service: 'Казпочта', method: 'Стандарт', city: 'Астана', address: 'пр. Республики, 78', cost: 800, dispatchDate: '2026-05-17', deliveryDate: null, status: 'В пути' },
+    { id: 3, orderId: 3, service: 'Kaspi Delivery', method: 'Курьер', city: 'Шымкент', address: 'ул. Тауке хана, 12', cost: 1500, dispatchDate: '2026-05-18', deliveryDate: '2026-05-22', status: 'Доставлено' },
+    { id: 4, orderId: 4, service: 'Казпочта', method: 'Стандарт', city: 'Караганда', address: 'ул. Ермекова, 89, кв. 3', cost: 500, dispatchDate: '2026-05-19', deliveryDate: null, status: 'Отменено' },
+    { id: 5, orderId: 5, service: 'CDEK', method: 'Курьер', city: 'Алматы', address: 'ул. Розыбакиева, 101', cost: 3000, dispatchDate: '2026-05-20', deliveryDate: null, status: 'В пути' },
+    { id: 6, orderId: 6, service: 'Kaspi Delivery', method: 'Стандарт', city: 'Астана', address: 'пр. Кабанбай батыра, 15', cost: 1200, dispatchDate: '2026-05-21', deliveryDate: '2026-05-25', status: 'Доставлено' },
+    { id: 7, orderId: 7, service: 'CDEK', method: 'Курьер', city: 'Актобе', address: 'ул. Есет батыра, 56', cost: 3500, dispatchDate: '2026-05-22', deliveryDate: null, status: 'В пути' },
+    { id: 8, orderId: 8, service: 'Kaspi Delivery', method: 'Курьер', city: 'Алматы', address: 'мкр. Самал-2, 45, кв. 78', cost: 2000, dispatchDate: '2026-05-23', deliveryDate: '2026-05-27', status: 'Доставлено' },
+];
+
+// Инициализация данных в localStorage
+function initData() {
+    if (!localStorage.getItem('orders')) {
+        localStorage.setItem('orders', JSON.stringify(defaultOrders));
+    }
+    if (!localStorage.getItem('delivery')) {
+        localStorage.setItem('delivery', JSON.stringify(defaultDelivery));
+    }
 }
 
-.card {
-    width: 420px;
-    margin: 20px auto;
-    background: white;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+function getOrders() {
+    return JSON.parse(localStorage.getItem('orders') || '[]');
 }
 
-.user-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+function saveOrders(orders) {
+    localStorage.setItem('orders', JSON.stringify(orders));
 }
 
-.avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: #4CAF50;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+function getDelivery() {
+    return JSON.parse(localStorage.getItem('delivery') || '[]');
 }
 
-.user {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 8px;
-    cursor: pointer;
-    border-radius: 8px;
+function saveDelivery(delivery) {
+    localStorage.setItem('delivery', JSON.stringify(delivery));
 }
 
-.user:hover {
-    background: #f3f3f3;
+// ============ ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ============
+
+function getStatusBadgeClass(status) {
+    switch (status) {
+        case 'Оплачен':
+        case 'Доставлено':
+            return 'bg-emerald-100 text-emerald-800';
+        case 'Новый':
+        case 'В пути':
+            return 'bg-blue-100 text-blue-800';
+        case 'Отменён':
+        case 'Отменено':
+            return 'bg-red-100 text-red-800';
+        default:
+            return 'bg-gray-100 text-gray-800';
+    }
 }
 
-.chat-box {
-    background: #f7f7f7;
-    border-radius: 10px;
-    height: 250px;
-    padding: 10px;
-    overflow-y: auto;
-    margin-top: 10px;
+function formatCurrency(amount) {
+    return new Intl.NumberFormat('ru-KZ', { style: 'decimal', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount) + ' ₸';
 }
 
-.message {
-    background: #e4e6eb;
-    padding: 6px 10px;
-    border-radius: 8px;
-    margin: 5px 0;
-    max-width: 70%;
-}
+// ============ НАВИГАЦИЯ ============
 
-.me {
-    background: #4CAF50;
-    color: white;
-    margin-left: auto;
-}
+let currentPage = 'dashboard';
 
-.input-row {
-    display: flex;
-    margin-top: 10px;
-}
-
-.input-row input {
-    flex: 1;
-    padding: 8px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
-}
-
-.input-row button {
-    margin-left: 5px;
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-}
-</style>
-</head>
-
-<body>
-
-<div class="card" id="profile" style="display:none;">
-    <div class="user-header">
-        <div class="avatar" id="avatar"></div>
-        <div>
-            <b id="userName"></b><br>
-            <small>online</small>
-        </div>
-    </div>
-</div>
-
-<div class="card" id="usersBlock" style="display:none;">
-    <h4>Выберите собеседника</h4>
-    <div id="usersList"></div>
-</div>
-
-<div class="card" id="chatBlock" style="display:none;">
-    <h4 id="chatWith">Чат</h4>
-
-    <div class="chat-box" id="chat"></div>
-
-    <div class="input-row">
-        <input id="messageInput" placeholder="Ваше сообщение">
-        <button id="sendBtn">➤</button>
-    </div>
-</div>
-
-<div class="card" id="authBlock">
-    <button id="loginBtn">Войти через Google</button>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-
-import {
-    getFirestore, collection, addDoc, onSnapshot,
-    serverTimestamp, doc, setDoc,
-    query, where
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
-
-import {
-    getAuth, signInWithPopup, GoogleAuthProvider,
-    onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyCFVJ51BsKGuUxQt0o33SWEOGuwiZ3kEOk",
-  authDomain: "nail-f4d56.firebaseapp.com",
-  projectId: "nail-f4d56"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-const provider = new GoogleAuthProvider();
-
-document.getElementById("loginBtn").onclick = () =>
-    signInWithPopup(auth, provider);
-
-let currentChatId = null;
-let unsubscribeMessages = null;
-
-// AUTH
-onAuthStateChanged(auth, async (user) => {
-    if (!user) return;
-
-    document.getElementById("authBlock").style.display = "none";
-    document.getElementById("profile").style.display = "block";
-    document.getElementById("usersBlock").style.display = "block";
-    document.getElementById("chatBlock").style.display = "block";
-
-    document.getElementById("userName").innerText = user.displayName;
-    document.getElementById("avatar").innerText =
-        user.displayName[0];
-
-    await setDoc(doc(db, "users", user.uid), {
-        name: user.displayName
+document.querySelectorAll('.nav-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = e.currentTarget.dataset.page;
+        navigateTo(page);
+        // Закрываем мобильное меню
+        closeMobileSidebar();
     });
-
-    loadUsers();
 });
 
-// USERS
-function loadUsers() {
-    onSnapshot(collection(db, "users"), (snap) => {
-        const list = document.getElementById("usersList");
-        list.innerHTML = "";
-
-        snap.forEach(d => {
-            if (d.id === auth.currentUser.uid) return;
-
-            const u = d.data();
-
-            const div = document.createElement("div");
-            div.className = "user";
-
-            div.innerHTML = `
-                <div class="avatar">${u.name[0]}</div>
-                ${u.name}
-            `;
-
-            div.onclick = () => startChat(d.id, u.name);
-
-            list.appendChild(div);
-        });
+function navigateTo(page) {
+    currentPage = page;
+    
+    // Обновляем активную ссылку
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.classList.remove('active', 'bg-blue-800', 'text-white');
+        link.classList.add('text-blue-100');
+        if (link.dataset.page === page) {
+            link.classList.add('active', 'bg-blue-800', 'text-white');
+            link.classList.remove('text-blue-100');
+        }
     });
-}
 
-// START CHAT
-function startChat(otherId, name) {
-
-    currentChatId = [auth.currentUser.uid, otherId]
-        .sort().join("_");
-
-    document.getElementById("chatWith").innerText =
-        "Чат с " + name;
-
-    if (unsubscribeMessages) unsubscribeMessages();
-
-    // ❗ БЕЗ orderBy (чтобы работало сразу)
-    const q = query(
-        collection(db, "messages"),
-        where("chatId", "==", currentChatId)
-    );
-
-    unsubscribeMessages = onSnapshot(q, (snap) => {
-        const chat = document.getElementById("chat");
-        chat.innerHTML = "";
-
-        let messages = [];
-
-        snap.forEach(d => messages.push(d.data()));
-
-        // сортируем вручную (замена orderBy)
-        messages.sort((a, b) =>
-            (a.timestamp?.seconds || 0) -
-            (b.timestamp?.seconds || 0)
-        );
-
-        messages.forEach(m => {
-            const isMe =
-                m.senderId === auth.currentUser.uid;
-
-            const div = document.createElement("div");
-            div.className = "message " + (isMe ? "me" : "");
-            div.textContent = m.text;
-
-            chat.appendChild(div);
-        });
-
-        chat.scrollTop = chat.scrollHeight;
-    });
-}
-
-// SEND
-document.getElementById("sendBtn").onclick = async () => {
-    const input = document.getElementById("messageInput");
-
-    if (!currentChatId) {
-        alert("Выбери пользователя");
-        return;
+    // Рендерим страницу
+    const content = document.getElementById('pageContent');
+    switch (page) {
+        case 'dashboard':
+            renderDashboard(content);
+            break;
+        case 'orders':
+            renderOrders(content);
+            break;
+        case 'delivery':
+            renderDelivery(content);
+            break;
     }
+}
 
-    if (!input.value.trim()) return;
+// ============ РЕНДЕР СТРАНИЦ ============
 
-    await addDoc(collection(db, "messages"), {
-        chatId: currentChatId,
-        senderId: auth.currentUser.uid,
-        text: input.value.trim(),
-        timestamp: serverTimestamp()
+function renderDashboard(container) {
+    const orders = getOrders();
+    const delivery = getDelivery();
+    
+    const totalOrdersSum = orders.reduce((sum, o) => sum + o.totalAmount, 0);
+    const activeDeliveries = delivery.filter(d => d.status === 'В пути').length;
+    
+    // Статистика по службам доставки
+    const serviceStats = {};
+    delivery.forEach(d => {
+        serviceStats[d.service] = (serviceStats[d.service] || 0) + 1;
     });
+    
+    const topServices = Object.entries(serviceStats)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3);
+    
+    // Данные для диаграммы по городам
+    const cityStats = {};
+    orders.forEach(o => {
+        cityStats[o.city] = (cityStats[o.city] || 0) + 1;
+    });
+    
+    const cities = Object.entries(cityStats);
+    const maxCityOrders = Math.max(...cities.map(([, count]) => count), 1);
+    
+    const topServicesHTML = topServices.length > 0
+        ? topServices.map(([service, count], i) => `
+            <div class="flex items-center justify-between py-2 ${i < topServices.length - 1 ? 'border-b border-gray-100' : ''}">
+                <span class="text-sm text-gray-600">${i + 1}. ${service}</span>
+                <span class="font-semibold text-primary">${count} зак.</span>
+            </div>
+        `).join('')
+        : '<p class="text-sm text-gray-400">Нет данных</p>';
 
-    input.value = "";
-};
-</script>
+    container.innerHTML = `
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-gray-800">Дашборд</h2>
+            <p class="text-gray-500 mt-1">Общая статистика интернет-магазина</p>
+        </div>
 
-</body>
-</html>
+        <!-- Карточки статистики -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-300">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-gray-500">Общая сумма заказов</span>
+                    <i class="fas fa-tenge-sign text-accent text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-800">${formatCurrency(totalOrdersSum)}</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-300">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-gray-500">Активных доставок</span>
+                    <i class="fas fa-truck text-blue-500 text-xl"></i>
+                </div>
+                <p class="text-3xl font-bold text-gray-800">${activeDeliveries}</p>
+                <p class="text-sm text-blue-600 mt-1">В пути</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow duration-300 sm:col-span-2 lg:col-span-1">
+                <span class="text-sm font-medium text-gray-500 block mb-4">Топ служб доставки</span>
+                ${topServicesHTML}
+            </div>
+        </div>
+
+        <!-- Диаграмма по городам -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-6">Количество заказов по городам</h3>
+            <div class="space-y-4">
+                ${cities.map(([city, count]) => {
+                    const percentage = (count / maxCityOrders * 100).toFixed(0);
+                    return `
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-sm font-medium text-gray-700">${city}</span>
+                                <span class="text-sm text-gray-500">${count} зак.</span>
+                            </div>
+                            <div class="w-full bg-gray-100 rounded-full h-2.5">
+                                <div class="bg-accent h-2.5 rounded-full transition-all duration-500" style="width: ${percentage}%"></div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        </div>
+    `;
+}
+
+function renderOrders(container) {
+    const orders = getOrders();
+    const cities = [...new Set(orders.map(o => o.city))];
+    
+    container.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Заказы</h2>
+                <p class="text-gray-500 mt-1">Управление заказами</p>
+            </div>
+            <button id="openAddOrderModal" class="bg-accent text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors duration-200 font-medium flex items-center gap-2 whitespace-nowrap">
+                <i class="fas fa-plus"></i> Добавить заказ
+            </button>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Статус</label>
+                <select id="orderStatusFilter" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                    <option value="">Все статусы</option>
+                    <option value="Новый">Новый</option>
+                    <option value="Оплачен">Оплачен</option>
+                    <option value="Доставлен">Доставлен</option>
+                    <option value="Отменён">Отменён</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Город</label>
+                <select id="orderCityFilter" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                    <option value="">Все города</option>
+                    ${cities.map(c => `<option value="${c}">${c}</option>`).join('')}
+                </select>
+            </div>
+        </div>
+
+        <!-- Таблица заказов -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3">ID</th>
+                            <th class="px-4 py-3">Пользователь</th>
+                            <th class="px-4 py-3">Дата</th>
+                            <th class="px-4 py-3">Город</th>
+                            <th class="px-4 py-3">Адрес</th>
+                            <th class="px-4 py-3">Сумма</th>
+                            <th class="px-4 py-3">Статус</th>
+                            <th class="px-4 py-3">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="noOrdersMessage" class="text-center py-8 text-gray-400 hidden">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>Заказы не найдены</p>
+            </div>
+        </div>
+    `;
+
+    // Привязываем события
+    document.getElementById('openAddOrderModal').addEventListener('click', openAddOrderModal);
+    document.getElementById('orderStatusFilter').addEventListener('change', filterOrdersTable);
+    document.getElementById('orderCityFilter').addEventListener('change', filterOrdersTable);
+    
+    filterOrdersTable();
+}
+
+function filterOrdersTable() {
+    const orders = getOrders();
+    const statusFilter = document.getElementById('orderStatusFilter')?.value || '';
+    const cityFilter = document.getElementById('orderCityFilter')?.value || '';
+    
+    let filtered = orders;
+    
+    if (statusFilter) {
+        filtered = filtered.filter(o => o.status === statusFilter);
+    }
+    if (cityFilter) {
+        filtered = filtered.filter(o => o.city === cityFilter);
+    }
+    
+    const tbody = document.getElementById('ordersTableBody');
+    const noMsg = document.getElementById('noOrdersMessage');
+    
+    if (!tbody) return;
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (noMsg) noMsg.classList.remove('hidden');
+    } else {
+        if (noMsg) noMsg.classList.add('hidden');
+        tbody.innerHTML = filtered.map(order => `
+            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-4 py-3 font-medium text-gray-800">#${order.id}</td>
+                <td class="px-4 py-3">Польз. ${order.userId}</td>
+                <td class="px-4 py-3">${order.orderDate}</td>
+                <td class="px-4 py-3">${order.city}</td>
+                <td class="px-4 py-3 max-w-xs truncate" title="${order.address}">${order.address}</td>
+                <td class="px-4 py-3 font-medium">${formatCurrency(order.totalAmount)}</td>
+                <td class="px-4 py-3">
+                    <select class="status-select text-xs font-medium px-2 py-1 rounded-full border-0 outline-none cursor-pointer ${getStatusBadgeClass(order.status)}" data-order-id="${order.id}">
+                        <option value="Новый" ${order.status === 'Новый' ? 'selected' : ''}>Новый</option>
+                        <option value="Оплачен" ${order.status === 'Оплачен' ? 'selected' : ''}>Оплачен</option>
+                        <option value="Доставлен" ${order.status === 'Доставлен' ? 'selected' : ''}>Доставлен</option>
+                        <option value="Отменён" ${order.status === 'Отменён' ? 'selected' : ''}>Отменён</option>
+                    </select>
+                </td>
+                <td class="px-4 py-3">
+                    <button class="text-red-500 hover:text-red-700 transition-colors duration-150 delete-order-btn" data-order-id="${order.id}" title="Удалить">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        // Привязываем события к статусам и кнопкам удаления
+        tbody.querySelectorAll('.status-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const orderId = parseInt(this.dataset.orderId);
+                updateOrderStatus(orderId, this.value);
+            });
+        });
+        
+        tbody.querySelectorAll('.delete-order-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const orderId = parseInt(this.dataset.orderId);
+                if (confirm('Удалить заказ #' + orderId + '?')) {
+                    deleteOrder(orderId);
+                }
+            });
+        });
+    }
+}
+
+function updateOrderStatus(orderId, newStatus) {
+    const orders = getOrders();
+    const index = orders.findIndex(o => o.id === orderId);
+    if (index !== -1) {
+        orders[index].status = newStatus;
+        saveOrders(orders);
+        filterOrdersTable();
+        // Обновить дашборд если нужно
+        if (currentPage === 'dashboard') {
+            renderDashboard(document.getElementById('pageContent'));
+        }
+    }
+}
+
+function deleteOrder(orderId) {
+    const orders = getOrders().filter(o => o.id !== orderId);
+    saveOrders(orders);
+    filterOrdersTable();
+}
+
+function renderDelivery(container) {
+    const delivery = getDelivery();
+    const services = [...new Set(delivery.map(d => d.service))];
+    
+    container.innerHTML = `
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">Доставка</h2>
+                <p class="text-gray-500 mt-1">Управление доставкой заказов</p>
+            </div>
+            <button id="openAddDeliveryModal" class="bg-accent text-white px-5 py-2.5 rounded-lg hover:bg-emerald-700 transition-colors duration-200 font-medium flex items-center gap-2 whitespace-nowrap">
+                <i class="fas fa-plus"></i> Добавить доставку
+            </button>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6 flex flex-wrap gap-4">
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Служба доставки</label>
+                <select id="deliveryServiceFilter" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                    <option value="">Все службы</option>
+                    ${services.map(s => `<option value="${s}">${s}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-medium text-gray-500 mb-1">Статус</label>
+                <select id="deliveryStatusFilter" class="px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary outline-none">
+                    <option value="">Все статусы</option>
+                    <option value="В пути">В пути</option>
+                    <option value="Доставлено">Доставлено</option>
+                    <option value="Отменено">Отменено</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Таблица доставки -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-gray-50 text-gray-600 uppercase text-xs">
+                        <tr>
+                            <th class="px-4 py-3">ID</th>
+                            <th class="px-4 py-3">Заказ №</th>
+                            <th class="px-4 py-3">Служба</th>
+                            <th class="px-4 py-3">Способ</th>
+                            <th class="px-4 py-3">Город</th>
+                            <th class="px-4 py-3">Адрес</th>
+                            <th class="px-4 py-3">Стоимость</th>
+                            <th class="px-4 py-3">Отправка</th>
+                            <th class="px-4 py-3">Доставка</th>
+                            <th class="px-4 py-3">Статус</th>
+                            <th class="px-4 py-3">Действия</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveryTableBody" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="noDeliveryMessage" class="text-center py-8 text-gray-400 hidden">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>Записи о доставке не найдены</p>
+            </div>
+        </div>
+    `;
+
+    document.getElementById('openAddDeliveryModal').addEventListener('click', openAddDeliveryModal);
+    document.getElementById('deliveryServiceFilter').addEventListener('change', filterDeliveryTable);
+    document.getElementById('deliveryStatusFilter').addEventListener('change', filterDeliveryTable);
+    
+    filterDeliveryTable();
+}
+
+function filterDeliveryTable() {
+    const delivery = getDelivery();
+    const serviceFilter = document.getElementById('deliveryServiceFilter')?.value || '';
+    const statusFilter = document.getElementById('deliveryStatusFilter')?.value || '';
+    
+    let filtered = delivery;
+    
+    if (serviceFilter) {
+        filtered = filtered.filter(d => d.service === serviceFilter);
+    }
+    if (statusFilter) {
+        filtered = filtered.filter(d => d.status === statusFilter);
+    }
+    
+    const tbody = document.getElementById('deliveryTableBody');
+    const noMsg = document.getElementById('noDeliveryMessage');
+    
+    if (!tbody) return;
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (noMsg) noMsg.classList.remove('hidden');
+    } else {
+        if (noMsg) noMsg.classList.add('hidden');
+        tbody.innerHTML = filtered.map(del => `
+            <tr class="hover:bg-gray-50 transition-colors duration-150">
+                <td class="px-4 py-3 font-medium text-gray-800">#${del.id}</td>
+                <td class="px-4 py-3">#${del.orderId}</
